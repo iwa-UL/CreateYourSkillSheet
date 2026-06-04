@@ -30,10 +30,12 @@
 ```text
 root/
 ├── src/                # ソースコード
+│   ├── assets/         # 共通CSSと画像
 │   ├── components/     # UIコンポーネント
 │   ├── composable/     # Validation機能
 │   ├── data/           # 質問データ
 │   ├── router/         # Vue router
+│   ├── stores/         # 状態管理(Pinia)
 │   ├── test/           # テスト用データ
 │   ├── types/          # 型データ
 │   ├── utils/          # 共通関数
