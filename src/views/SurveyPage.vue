@@ -3,43 +3,19 @@ import QuestionCard from '@/components/QuestionCard.vue';
 import ValidationError from '@/components/ValidationError.vue';
 import { ref, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
+import { useSurveyStore } from '@/stores/useSurveyStore';
 import { useSurveyValidation } from '@/composables/useSurveyValidation';
-import { QUESTION_DATA } from '@/data/questions';
-import { ROUTES, STORAGE_KEYS, CATEGORIES, LEVEL_LABELS } from '@/utils/constants';
-import {
-  getStorageValue,
-  setStorageValue,
-  initQuestionStates,
-  extractQuestionData,
-} from '@/utils/utils';
-import type { Category, QuestionState, SurveyData } from '@/types';
+import { ROUTES, LEVEL_LABELS } from '@/utils/constants';
+import type { QuestionState } from '@/types';
 
 const router = useRouter();
+const store = useSurveyStore();
 const isHovering = ref<boolean>(false);
 
-// ─── ユーザー情報 ────────────────────────────────────────────────────────────
+// ─── ストアからデータを取得 ──────────────────────────────────────────────────
 
-const userName = getStorageValue<string>(STORAGE_KEYS.USER_NAME, '');
-
-// ─── カテゴリと質問データを統合管理 ─────────────────────────────────────────
-
-const categoryData = ref<Category[]>([
-  {
-    ...CATEGORIES.COMMON,
-    isChecked: true,
-    questions: initQuestionStates(QUESTION_DATA.common),
-  },
-  {
-    ...CATEGORIES.ENGINEER,
-    isChecked: getStorageValue<boolean>(STORAGE_KEYS.CATEGORY_ENGINEER, false),
-    questions: initQuestionStates(QUESTION_DATA.engineer),
-  },
-  {
-    ...CATEGORIES.DESIGNER,
-    isChecked: getStorageValue<boolean>(STORAGE_KEYS.CATEGORY_DESIGNER, false),
-    questions: initQuestionStates(QUESTION_DATA.designer),
-  },
-]);
+const { userName, categoryData } = storeToRefs(store);
 
 // ─── バリデーション ──────────────────────────────────────────────────────────
 
@@ -63,27 +39,13 @@ const handleQuestionUpdate = (
 
 /** 次へ進む処理 */
 const onSubmit = async (): Promise<void> => {
-  // エラーがある場合はエラー箇所へスクロールして中断
   if (!validate()) {
     await nextTick();
     const target = document.getElementById('error-message');
     target?.scrollIntoView({ behavior: 'smooth' });
+    target?.focus();
     return;
   }
-
-  // データ保存
-  const surveyData: SurveyData = {
-    userName,
-    categories: categoryData.value.map((cat) => ({
-      id: cat.id,
-      genre: cat.genre,
-      icon: cat.icon,
-      isChecked: cat.isChecked,
-      questions: extractQuestionData(cat.questions),
-    })),
-  };
-
-  setStorageValue(STORAGE_KEYS.SURVEY_DATA, surveyData);
   router.push(ROUTES.RESULT);
 };
 </script>
@@ -135,12 +97,12 @@ const onSubmit = async (): Promise<void> => {
       </ValidationError>
 
       <div class="submit-section">
-        <p v-if="isSubmitDisabled()" class="submit-hint">
+        <p v-if="isSubmitDisabled" class="submit-hint">
           <font-awesome-icon icon="fa-solid fa-triangle-exclamation" shake />
           すべてのチェック項目に習熟度を選択してください
         </p>
         <button @mouseenter="isHovering = true" @mouseleave="isHovering = false" @click="onSubmit" class="submit-button"
-          :class="{ disabled: isSubmitDisabled() }" :disabled="isSubmitDisabled()">
+          :class="{ disabled: isSubmitDisabled }" :disabled="isSubmitDisabled">
           次へ進む &ensp;
           <font-awesome-icon icon="fa-solid fa-arrow-right" :bounce="isHovering" />
         </button>

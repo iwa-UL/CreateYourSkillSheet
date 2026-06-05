@@ -1,34 +1,33 @@
-// LocalStorageキー
-export const STORAGE_KEYS = {
-  USER_NAME: 'name',
-  CATEGORY_ENGINEER: 'engineer',
-  CATEGORY_DESIGNER: 'designer',
-  SURVEY_DATA: 'surveyData',
-};
+/**
+ * カテゴリ定義。各カテゴリはID、ジャンル名、アイコン、ストレージキー（必要な場合）を持つ。
+ * COMMONカテゴリは常に選択されるため、ストレージキーは不要。
+ * ENGINEERとDESIGNERカテゴリはユーザーの選択に応じて保存されるため、ストレージキーが必要。
+ */
 
-// カテゴリ定義
 export const CATEGORIES = {
   COMMON: {
     id: 1,
     genre: '共通の質問',
     icon: 'fa-solid fa-briefcase',
-    alwaysChecked: true,
   },
   ENGINEER: {
     id: 2,
     genre: 'プログラマ/エンジニア向けの質問',
     icon: 'fa-solid fa-computer',
-    storageKey: STORAGE_KEYS.CATEGORY_ENGINEER,
   },
   DESIGNER: {
     id: 3,
     genre: 'デザイナー(動画制作)向けの質問',
     icon: 'fa-solid fa-palette',
-    storageKey: STORAGE_KEYS.CATEGORY_DESIGNER,
   },
 };
 
-// 習熟度ラベル
+/**
+ * 習熟度レベルの定義。各レベルは、星の数と説明テキストを持つオブジェクトの配列で表される。
+ * レベル1は「習得が不十分な状態」、レベル2は「基礎はあるが不安定」、レベル3は「期待どおりにできる」、レベル4は「期待以上の成果を出す」、レベル5は「卓越したレベルで発揮する」と定義されている。
+ * これらの定義は、アンケートの回答に対する習熟度評価を一貫して行うために使用される。
+ */
+
 export const LEVEL_LABELS = [
   { stars: '★☆☆☆☆', text: '習得が不十分な状態' },
   { stars: '★★☆☆☆', text: '基礎はあるが不安定' },
@@ -37,7 +36,12 @@ export const LEVEL_LABELS = [
   { stars: '★★★★★', text: '卓越したレベルで発揮する' },
 ];
 
-// ルートパス
+/**
+ * ルート定義。アプリケーション内の主要なページへのパスを定数として定義することで、ルーティングの管理を一元化し、コード全体で一貫したルートの使用を保証する。
+ * TOPはトップページ、SURVEYはアンケートページ、RESULTは結果ページを表す。
+ * これらの定義は、Vue Routerなどのルーティングライブラリで使用され、ナビゲーションやリンクの生成に利用される。
+ */
+
 export const ROUTES = {
   TOP: '/',
   SURVEY: '/survey',

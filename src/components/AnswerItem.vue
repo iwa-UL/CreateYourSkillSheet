@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import type { Answer } from '@/types';
+import type { AnswerState, StarLevel } from '@/types';
+import { LEVEL_LABELS } from '@/utils/constants';
 
 interface Props {
-  answer: Answer;
+  answer: AnswerState;
   answerIndex: number;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
-  'update:answer': [answer: Answer];
+  'update:answer': [answer: AnswerState];
 }>();
 
 // チェックボックスの変更
@@ -21,7 +22,7 @@ const handleCheckChange = (e: Event) => {
 };
 
 // 習熟度の変更
-const handleLevelChange = (level: number) => {
+const handleLevelChange = (level: StarLevel) => {
   emit('update:answer', {
     ...props.answer,
     value: level,
@@ -39,9 +40,10 @@ const handleLevelChange = (level: number) => {
     <transition name="slide-fade">
       <div v-if="answer.isChecked" class="level-selector">
         <div class="level-buttons">
-          <label v-for="level in 5" :key="level" class="level-button" :class="{ active: answer.value === level }">
-            <input type="radio" :checked="answer.value === level" @change="handleLevelChange(level)"
-              class="level-radio" />
+          <label v-for="level in 5" :key="level" class="level-button" :class="{ active: answer.value === level }"
+            :aria-label="`習熟度 ${level}: ${LEVEL_LABELS[level - 1]!.text}`">
+            <input type="radio" :checked="answer.value === level" @change="handleLevelChange(level as StarLevel)"
+              class="level-radio" :aria-label="`${level}段階`" />
             <span class="level-number">{{ level }}</span>
             <span class="level-stars">{{ '★'.repeat(level) }}</span>
           </label>

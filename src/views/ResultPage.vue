@@ -1,14 +1,15 @@
 ﻿<script setup lang="ts">
 import ShareButton from '@/components/ShareButton.vue';
 import AnimatedIconButton from '@/components/AnimatedIconButton.vue';
-import { STORAGE_KEYS, ROUTES, LEVEL_LABELS } from '@/utils/constants';
+import { ROUTES, LEVEL_LABELS } from '@/utils/constants';
 import { getDataFromUrl } from '@/utils/shareUtils';
-import { getStorageValue } from '@/utils/utils';
-import { ref, onMounted } from 'vue';
+import { useSurveyStore } from '@/stores/useSurveyStore';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import type { SurveyData, Answer, QuestionState } from '@/types';
+import type { SurveyData, AnswerState } from '@/types';
 
 const router = useRouter();
+const store = useSurveyStore();
 const isSharedView = ref<boolean>(false);
 const surveyData = ref<SurveyData | null>(null);
 
@@ -17,33 +18,42 @@ const surveyData = ref<SurveyData | null>(null);
 onMounted((): void => {
   const urlData = getDataFromUrl();
   if (urlData) {
-    surveyData.value = urlData;
+    // 1. ストアにURLのデータをロードする（これでストアとlocalStorageが同期されます）
+    store.loadFromSharedData(urlData);
+
+    // 2. 画面表示用のデータとして、ストアの最新データを参照する
+    surveyData.value = store.surveyData;
     isSharedView.value = true;
     return;
   }
 
-  const localData = getStorageValue<SurveyData>(STORAGE_KEYS.SURVEY_DATA);
-  if (localData) {
-    surveyData.value = localData;
-    isSharedView.value = false;
-    return;
-  }
-
-  router.push(ROUTES.SURVEY);
+  // URLにデータがない（通常の自分の結果表示）場合
+  surveyData.value = store.surveyData;
+  isSharedView.value = false;
 });
-
-const getQuestionsByCategory = (categoryId: number): QuestionState[] => {
-  if (!surveyData.value) return [];
-  const category = surveyData.value.categories.find((c) => c.id === categoryId);
-  return category?.questions ?? [];
-};
 
 /**
  * チェックされた回答のみ返す。
  */
-const getCheckedAnswers = (answers: Answer[]): Answer[] => {
+const getCheckedAnswers = (answers: AnswerState[]): AnswerState[] => {
   return answers.filter((answer) => answer.isChecked);
 };
+
+// ─── 分岐処理 ──────────────────────────────────────────────────────────────
+
+const displayCategories = computed(() =>
+  (surveyData.value?.categories ?? [])
+    .filter((cat) => cat.isChecked)
+    .map((cat) => ({
+      ...cat,
+      questions: cat.questions
+        .map((q) => ({
+          ...q,
+          answers: getCheckedAnswers(q.answers),
+        }))
+        .filter((q) => q.answers.length > 0),
+    })),
+);
 
 // ─── イベントハンドラ ────────────────────────────────────────────────────────
 
@@ -84,28 +94,26 @@ const handlePrint = (): void => {
     </div>
 
     <div class="content-wrapper">
-      <div v-for="category in surveyData.categories" :key="category.id" v-show="category.isChecked"
+      <div v-for="category in displayCategories" :key="category.id" v-show="category.isChecked"
         class="category-section">
         <div class="category-header">
           <font-awesome-icon :icon="category.icon" class="category-icon" />
           <h3 class="category-title">{{ category.genre }}</h3>
         </div>
-
-        <div v-for="question in getQuestionsByCategory(category.id)" :key="question.id"
-          v-show="getCheckedAnswers(question.answers).length > 0" class="question-block">
-          <template v-if="getCheckedAnswers(question.answers).length > 0">
-            <h4 class="question-title">{{ question.questionText }}</h4>
-            <div class="skills-grid">
-              <div v-for="(answer, index) in getCheckedAnswers(question.answers)" :key="index" class="skill-card">
-                <div class="skill-info">
-                  <div class="skill-name">{{ answer.label }}</div>
-                  <div class="skill-level">
-                    <span class="level-stars">{{ LEVEL_LABELS[answer.value ?? -1]?.stars }}</span>
-                  </div>
+        <div v-for="question in category.questions" :key="question.id" class="question-block">
+          <h4 class="question-title">{{ question.questionText }}</h4>
+          <div class="skills-grid">
+            <div v-for="answer in question.answers" :key="answer.label" class="skill-card">
+              <div class="skill-info">
+                <div class="skill-name">{{ answer.label }}</div>
+                <div class="skill-level">
+                  <span class="level-stars">{{
+                    LEVEL_LABELS[(answer.value ?? 0) - 1]?.stars
+                    }}</span>
                 </div>
               </div>
             </div>
-          </template>
+          </div>
         </div>
       </div>
 
@@ -135,8 +143,8 @@ const handlePrint = (): void => {
     </div>
   </div>
 
-  <div v-else class="loading-container">
-    <div class="loading-spinner"></div>
+  <div v-else class="loading-container" role="status" aria-label="データを読み込んでいます" aria-live="polite">
+    <div class="loading-spinner" aria-hidden="true"></div>
     <p class="loading-text">データを読み込んでいます...</p>
   </div>
 </template>

@@ -1,15 +1,22 @@
-import type { QuestionState } from './question';
-
 export * from './question';
+import type { QuestionState } from './question';
 
 export interface SurveyData {
   userName: string;
-  categories: Category[];
+  categories: CategoryState[];
 }
 
-export interface Category {
-  readonly id: number;
-  readonly genre: string;
+/** マスターデータ: カテゴリの定義情報のみ */
+export interface CategoryDef {
+  id: number;
+  genre: string;
+  icon?: string;
+}
+
+/** UI状態: 選択状態・質問状態を含む */
+export interface CategoryState {
+  id: number;
+  genre: string;
   icon?: string;
   isChecked: boolean;
   questions: QuestionState[];

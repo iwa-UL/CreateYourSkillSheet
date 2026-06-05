@@ -1,17 +1,17 @@
 import LZString from 'lz-string';
-import type { Category, SurveyData } from '@/types';
+import type { CategoryState, SurveyData } from '@/types';
 
 // ========================================
 // 型ガード
 // ========================================
 
-const isCategory = (value: unknown): value is Category =>
+const isCategoryState = (value: unknown): value is CategoryState =>
   typeof value === 'object' &&
   value !== null &&
-  typeof (value as Category).id === 'number' &&
-  typeof (value as Category).genre === 'string' &&
-  typeof (value as Category).isChecked === 'boolean' &&
-  Array.isArray((value as Category).questions);
+  typeof (value as CategoryState).id === 'number' &&
+  typeof (value as CategoryState).genre === 'string' &&
+  typeof (value as CategoryState).isChecked === 'boolean' &&
+  Array.isArray((value as CategoryState).questions);
 
 const isSurveyData = (value: unknown): value is SurveyData =>
   typeof value === 'object' &&
@@ -19,7 +19,7 @@ const isSurveyData = (value: unknown): value is SurveyData =>
   typeof (value as SurveyData).userName === 'string' &&
   !!(value as SurveyData).userName &&
   Array.isArray((value as SurveyData).categories) &&
-  (value as SurveyData).categories.every(isCategory);
+  (value as SurveyData).categories.every(isCategoryState);
 
 // ========================================
 // データの圧縮・展開
@@ -30,11 +30,9 @@ const isSurveyData = (value: unknown): value is SurveyData =>
  * @param data - 圧縮・エンコード対象のオブジェクト
  * @returns 圧縮・エンコードされた文字列、またはエラーが発生した場合はnull
  */
-
 export const encodeData = (data: SurveyData): string | null => {
   try {
     const jsonString = JSON.stringify(data);
-    // LZ-stringで圧縮 + URL安全なBase64エンコード
     return LZString.compressToEncodedURIComponent(jsonString);
   } catch (error) {
     console.error('エンコードエラー:', error);
@@ -47,10 +45,8 @@ export const encodeData = (data: SurveyData): string | null => {
  * @param compressedString - デコード対象の圧縮・エンコードされた文字列
  * @returns デコードされたオブジェクト、またはエラーが発生した場合はnull
  */
-
 export const decodeData = (compressedString: string): SurveyData | null => {
   try {
-    // LZ-stringで解凍
     const jsonString = LZString.decompressFromEncodedURIComponent(compressedString);
     if (!jsonString) {
       throw new Error('解凍に失敗しました');
@@ -67,44 +63,45 @@ export const decodeData = (compressedString: string): SurveyData | null => {
 // ========================================
 
 /**
- * SurveyDataをエンコードしてURLを生成
+ * SurveyDataオブジェクトをエンコードしてURLのクエリパラメータに埋め込み、結果ページへの完全なURLを生成
  */
-
 export const createShareUrl = (surveyData: SurveyData): string => {
   const encoded = encodeData(surveyData);
   if (!encoded) {
     throw new Error('データのエンコードに失敗しました');
   }
   const url = new URL(window.location.href);
-  url.hash = `/result`;
-  url.searchParams.set('data', encoded);
+  url.hash = `/result?data=${encoded}`;
+
+  url.search = '';
+
   return url.toString();
 };
 
 /**
  * URLからエンコードされたデータを抽出してデコードし、SurveyDataオブジェクトを返す
  */
-
 export const getDataFromUrl = (): SurveyData | null => {
   try {
     const url = new URL(window.location.href);
-    if (!url.hash) return null;
-    const [, hashPath] = url.hash.split('?'); // "#/result?data=xxxxx" から "?data=xxxxx" 部分を抽出
-    if (!hashPath) return null;
+    // ハッシュ（#）が含まれていない、またはハッシュ内に『?』が含まれていない場合は処理しない
+    if (!url.hash || !url.hash.includes('?')) return null;
 
-    // URLパラメータの解析
-    const urlParams = new URLSearchParams(hashPath);
+    // 『?』で分割し、後半のクエリ文字列（data=xxxx...）を取得する
+    const [, hashQuery] = url.hash.split('?');
+    if (!hashQuery) return null;
+
+    // クエリ文字列をパースする
+    const urlParams = new URLSearchParams(hashQuery);
     const encodedData = urlParams.get('data');
     if (!encodedData) return null;
 
-    // デコード処理
     const decoded = decodeData(encodedData);
     if (!decoded) {
       console.error('データのデコードに失敗しました。URLが破損している可能性があります。');
       return null;
     }
 
-    // 型ガードによるデータ構造の検証
     if (!isSurveyData(decoded)) {
       console.error('デコードされたデータの構造が無効です');
       return null;
@@ -126,11 +123,10 @@ export const getDataFromUrl = (): SurveyData | null => {
  * @param text - コピーするテキスト
  * @returns コピーが成功したかどうかを示すPromise<boolean>
  */
-
 export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
-    if (!navigator.clipboard) return false; // navigator.clipboardがサポートされていない場合はfalseを返す
-    await navigator.clipboard.writeText(text); // クリップボードにテキストをコピー
+    if (!navigator.clipboard) return false;
+    await navigator.clipboard.writeText(text);
     return true;
   } catch (error) {
     if (error instanceof Error) {
